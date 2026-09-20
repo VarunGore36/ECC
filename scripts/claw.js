@@ -108,7 +108,12 @@ function askClaude(systemPrompt, history, userMessage, model) {
   // same quoted-command-line pattern as scripts/hooks/mcp-health-check.js so
   // space-containing paths survive as single tokens. .ps1 is never executed
   // directly — fall through to bare `claude` (pre-change behavior) instead.
-  const quoteWin = token => (/[\s"&|<>^%!();]/.test(token) ? '"' + token.replace(/"/g, '""') + '"' : token);
+  // cmd.exe expands %NAME% even inside double-quoted strings, so reject
+  // percent-delimited executable paths rather than route them through the shell.
+  function quoteWinToken(token) {
+    if (/%/.test(token)) return null;
+    return /[\s"&|<>^();]/.test(token) ? '"' + token.replace(/"/g, '""') + '"' : token;
+  }
   let bin = 'claude';
   let useShell = false;
   if (process.platform === 'win32') {
@@ -124,6 +129,9 @@ function askClaude(systemPrompt, history, userMessage, model) {
         break;
       }
     }
+    if (useShell && quoteWinToken(bin) === null) {
+      useShell = false;
+    }
   }
   const spawnOpts = {
     input: fullPrompt,
@@ -133,7 +141,7 @@ function askClaude(systemPrompt, history, userMessage, model) {
     timeout: 300000,
   };
   const result = useShell
-    ? spawnSync([bin, ...args].map(quoteWin).join(' '), { ...spawnOpts, shell: true })
+    ? spawnSync([bin, ...args].map(quoteWinToken).join(' '), { ...spawnOpts, shell: true })
     : spawnSync(bin, args, { ...spawnOpts, shell: false });
 
   if (result.error) {
