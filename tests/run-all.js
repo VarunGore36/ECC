@@ -103,6 +103,11 @@ console.log(boxLine('           Everything Claude Code - Test Suite'));
 console.log('╚' + '═'.repeat(BOX_W) + '╝');
 console.log();
 
+if (skipPatterns.length > 0) {
+  console.log(`⚠ Skipped patterns: ${skipPatterns.join(', ')}`);
+  console.log();
+}
+
 if (testFiles.length === 0) {
   console.log(`✗ No test files matched ${TEST_GLOB}${filter ? ` with filter "${filter}"` : ''}`);
   process.exit(1);
@@ -196,5 +201,4 @@ if (failedFiles.length > 0) {
 console.log('╚' + '═'.repeat(BOX_W) + '╝');
 console.log(`\nPassed: ${totalPassed}, Failed: ${totalFailed}`);
 
-const allowFailures = process.env.ECC_TEST_ALLOW_FAILURES === '1';
-process.exit(!allowFailures && totalFailed > 0 ? 1 : 0);
+process.exit(totalFailed > 0 ? 1 : 0);
